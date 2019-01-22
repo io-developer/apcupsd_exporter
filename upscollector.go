@@ -181,7 +181,7 @@ func (c *UPSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	ch <- prometheus.MustNewConstMetric(
 		c.Status,
 		prometheus.GaugeValue,
-		parseStatus(s.Status),
+		float64(parseStatus(s.Status)),
 		labels...,
 	)
 
@@ -293,78 +293,40 @@ func (c *UPSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	return nil, nil
 }
 
-func parseStatus(status string) float64 {
-	switch status {
-	case "COMMLOST":
-		return 0
-	case "ERROR":
+func parseStatus(s string) int {
+	switch {
+	case s == "COMMLOST":
+		return -1
+	case s == "ERROR":
+		return -2
+	case s == "NETWORK ERROR":
+		return -3
+	case regexp.MustCompile(`\bONBATT\b`).MatchString(s):
+		return 10 + parseStatusFlag(s)
+	case regexp.MustCompile(`\bONLINE\b`).MatchString(s):
+		return 20 + parseStatusFlag(s)
+	}
+	return parseStatusFlag(s)
+}
+
+func parseStatusFlag(s string) int {
+	switch {
+	case regexp.MustCompile(`\bTRIM\b`).MatchString(s):
 		return 1
-	case "NETWORK ERROR":
+	case regexp.MustCompile(`\bBOOST\b`).MatchString(s):
 		return 2
-	case "SHUTTING DOWN":
+	case regexp.MustCompile(`\bOVERLOAD\b`).MatchString(s):
 		return 3
-	case "SELFTEST":
+	case regexp.MustCompile(`\bLOWBATT\b`).MatchString(s):
 		return 4
-	}
-	if regexp.MustCompile(`\bONLINE\b`).MatchString(status) {
-		if regexp.MustCompile(`\bTRIM\b`).MatchString(status) {
-			return 11
-		}
-		if regexp.MustCompile(`\bBOOST\b`).MatchString(status) {
-			return 12
-		}
-		if regexp.MustCompile(`\bOVERLOAD\b`).MatchString(status) {
-			return 13
-		}
-		if regexp.MustCompile(`\bLOWBATT\b`).MatchString(status) {
-			return 14
-		}
-		if regexp.MustCompile(`\bREPLACEBATT\b`).MatchString(status) {
-			return 15
-		}
-		if regexp.MustCompile(`\bNOBATT\b`).MatchString(status) {
-			return 16
-		}
-		if regexp.MustCompile(`\bCAL\b`).MatchString(status) {
-			return 17
-		}
-		return 10
-	}
-	if regexp.MustCompile(`\bONBATT\b`).MatchString(status) {
-		if regexp.MustCompile(`\bOVERLOAD\b`).MatchString(status) {
-			return 23
-		}
-		if regexp.MustCompile(`\bLOWBATT\b`).MatchString(status) {
-			return 24
-		}
-		if regexp.MustCompile(`\bREPLACEBATT\b`).MatchString(status) {
-			return 25
-		}
-		if regexp.MustCompile(`\bCAL\b`).MatchString(status) {
-			return 27
-		}
-		return 20
-	}
-	if regexp.MustCompile(`\bTRIM\b`).MatchString(status) {
-		return 30
-	}
-	if regexp.MustCompile(`\bBOOST\b`).MatchString(status) {
-		return 31
-	}
-	if regexp.MustCompile(`\bOVERLOAD\b`).MatchString(status) {
-		return 32
-	}
-	if regexp.MustCompile(`\bLOWBATT\b`).MatchString(status) {
-		return 33
-	}
-	if regexp.MustCompile(`\bREPLACEBATT\b`).MatchString(status) {
-		return 34
-	}
-	if regexp.MustCompile(`\bNOBATT\b`).MatchString(status) {
-		return 35
-	}
-	if regexp.MustCompile(`\bCAL\b`).MatchString(status) {
-		return 36
+	case regexp.MustCompile(`\bREPLACEBATT\b`).MatchString(s):
+		return 5
+	case regexp.MustCompile(`\bCAL\b`).MatchString(s):
+		return 6
+	case regexp.MustCompile(`\bSELFTEST\b`).MatchString(s):
+		return 7
+	case regexp.MustCompile(`\bSHUTTING DOWN\b`).MatchString(s):
+		return 8
 	}
 	return 0
 }
