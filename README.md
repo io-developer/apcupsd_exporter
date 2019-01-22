@@ -23,6 +23,36 @@ Usage of ./apcupsd_exporter:
         URL path for surfacing collected metrics (default "/metrics")
 ```
 
+Docker
+------
+https://hub.docker.com/r/iodeveloper/prom_apcupsdexporter
+```
+iodeveloper/prom_apcupsdexporter:latest
+```
+
+**docker-compose.yml** example:
+```yaml
+version: '3.4'
+
+services:
+
+  apcupsd-home-main:
+    image: iodeveloper/prom_apcupsdexporter:latest
+    user: root
+    privileged: true
+    restart: unless-stopped
+    network_mode: "host"
+    command: /apcupsd_exporter -apcupsd.addr="0.0.0.0:3551" -telemetry.addr="172.101.0.1:10001"
+    
+  apcupsd-home-server:
+    image: iodeveloper/prom_apcupsdexporter:latest
+    user: root
+    privileged: true
+    restart: unless-stopped
+    network_mode: "host"
+    command: /apcupsd_exporter -apcupsd.addr="0.0.0.0:3552" -telemetry.addr="172.101.0.1:10002"
+```
+
 Sample
 ------
 
