@@ -294,41 +294,39 @@ func (c *UPSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 }
 
 func parseStatus(s string) int {
+	onlineFlag := 0
+	if regexp.MustCompile(`\bONLINE\b`).MatchString(s) {
+		onlineFlag = 1
+	} else if regexp.MustCompile(`\bONBATT\b`).MatchString(s) {
+		onlineFlag = 2
+	}
 	switch {
 	case s == "COMMLOST":
-		return -1
+		return 0
 	case s == "ERROR":
-		return -2
-	case s == "NETWORK ERROR":
-		return -3
-	case regexp.MustCompile(`\bONBATT\b`).MatchString(s):
-		return 10 + parseStatusFlag(s)
-	case regexp.MustCompile(`\bONLINE\b`).MatchString(s):
-		return 20 + parseStatusFlag(s)
-	}
-	return parseStatusFlag(s)
-}
-
-func parseStatusFlag(s string) int {
-	switch {
-	case regexp.MustCompile(`\bTRIM\b`).MatchString(s):
 		return 1
-	case regexp.MustCompile(`\bBOOST\b`).MatchString(s):
+	case s == "NETWORK ERROR":
 		return 2
-	case regexp.MustCompile(`\bOVERLOAD\b`).MatchString(s):
+	case s == "SHUTTING DOWN":
 		return 3
-	case regexp.MustCompile(`\bLOWBATT\b`).MatchString(s):
-		return 4
+	case s == "SELFTEST":
+		return 80
+	case regexp.MustCompile(`\bNOBATT\b`).MatchString(s):
+		return 10 + onlineFlag
 	case regexp.MustCompile(`\bREPLACEBATT\b`).MatchString(s):
-		return 5
+		return 20 + onlineFlag
+	case regexp.MustCompile(`\bLOWBATT\b`).MatchString(s):
+		return 30 + onlineFlag
+	case regexp.MustCompile(`\bOVERLOAD\b`).MatchString(s):
+		return 40 + onlineFlag
+	case regexp.MustCompile(`\bTRIM\b`).MatchString(s):
+		return 50 + onlineFlag
+	case regexp.MustCompile(`\bBOOST\b`).MatchString(s):
+		return 60 + onlineFlag
 	case regexp.MustCompile(`\bCAL\b`).MatchString(s):
-		return 6
-	case regexp.MustCompile(`\bSELFTEST\b`).MatchString(s):
-		return 7
-	case regexp.MustCompile(`\bSHUTTING DOWN\b`).MatchString(s):
-		return 8
+		return 70 + onlineFlag
 	}
-	return 0
+	return 100 + onlineFlag
 }
 
 // collectTimestamp collects timestamp metrics.
