@@ -2,6 +2,7 @@ package apcupsdexporter
 
 import (
 	"log"
+	"regexp"
 	"time"
 
 	"github.com/mdlayher/apcupsd"
@@ -18,6 +19,7 @@ type StatusSource interface {
 
 // A UPSCollector is a Prometheus collector for metrics regarding an APC UPS.
 type UPSCollector struct {
+	Status                              *prometheus.Desc
 	UPSLoadPercent                      *prometheus.Desc
 	BatteryChargePercent                *prometheus.Desc
 	LineVolts                           *prometheus.Desc
@@ -32,6 +34,7 @@ type UPSCollector struct {
 	LastTransferOffBattery              *prometheus.Desc
 	LastSelftest                        *prometheus.Desc
 	NominalPowerWatts                   *prometheus.Desc
+	InternalTemp                        *prometheus.Desc
 
 	ss StatusSource
 }
@@ -45,6 +48,13 @@ func NewUPSCollector(ss StatusSource) *UPSCollector {
 	)
 
 	return &UPSCollector{
+		Status: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "ups_status"),
+			"Current UPS status.",
+			labels,
+			nil,
+		),
+
 		UPSLoadPercent: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "ups_load_percent"),
 			"Current UPS load percentage.",
@@ -116,29 +126,36 @@ func NewUPSCollector(ss StatusSource) *UPSCollector {
 		),
 
 		LastTransferOnBattery: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "apcupsd_last_transfer_on_battery"),
+			prometheus.BuildFQName(namespace, "", "last_transfer_on_battery"),
 			"Time of last transfer to battery since apcupsd startup.",
 			labels,
 			nil,
 		),
 
 		LastTransferOffBattery: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "apcupsd_last_transfer_off_battery"),
+			prometheus.BuildFQName(namespace, "", "last_transfer_off_battery"),
 			"Time of last transfer from battery since apcupsd startup.",
 			labels,
 			nil,
 		),
 
 		LastSelftest: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "apcupsd_last_selftest"),
+			prometheus.BuildFQName(namespace, "", "last_selftest"),
 			"Time of last selftest since apcupsd startup.",
 			labels,
 			nil,
 		),
 
 		NominalPowerWatts: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "apcupsd_nominal_power_watts"),
+			prometheus.BuildFQName(namespace, "", "nominal_power_watts"),
 			"Nominal power output in watts.",
+			labels,
+			nil,
+		),
+
+		InternalTemp: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "internal_temp"),
+			"Internal temperature",
 			labels,
 			nil,
 		),
@@ -160,6 +177,13 @@ func (c *UPSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		s.UPSName,
 		s.Model,
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.Status,
+		prometheus.GaugeValue,
+		parseStatus(s.Status),
+		labels...,
+	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.UPSLoadPercent,
@@ -259,7 +283,72 @@ func (c *UPSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		labels...,
 	)
 
+	ch <- prometheus.MustNewConstMetric(
+		c.InternalTemp,
+		prometheus.GaugeValue,
+		float64(s.InternalTemp),
+		labels...,
+	)
+
 	return nil, nil
+}
+
+func parseStatus(status string) float64 {
+	switch status {
+	case "COMMLOST":
+		return 0
+	case "ERROR":
+		return 1
+	case "NETWORK ERROR":
+		return 2
+	case "SHUTTING DOWN":
+		return 3
+	case "SELFTEST":
+		return 4
+	}
+	if regexp.MustCompile(`\bONLINE\b`).MatchString(status) {
+		if regexp.MustCompile(`\bTRIM\b`).MatchString(status) {
+			return 11
+		}
+		if regexp.MustCompile(`\bBOOST\b`).MatchString(status) {
+			return 12
+		}
+		if regexp.MustCompile(`\bOVERLOAD\b`).MatchString(status) {
+			return 13
+		}
+		if regexp.MustCompile(`\bLOWBATT\b`).MatchString(status) {
+			return 14
+		}
+		if regexp.MustCompile(`\bREPLACEBATT\b`).MatchString(status) {
+			return 15
+		}
+		if regexp.MustCompile(`\bNOBATT\b`).MatchString(status) {
+			return 16
+		}
+		if regexp.MustCompile(`\bCAL\b`).MatchString(status) {
+			return 17
+		}
+		return 10
+	}
+	if regexp.MustCompile(`\bONBATT\b`).MatchString(status) {
+		if regexp.MustCompile(`\bOVERLOAD\b`).MatchString(status) {
+			return 23
+		}
+		if regexp.MustCompile(`\bLOWBATT\b`).MatchString(status) {
+			return 24
+		}
+		if regexp.MustCompile(`\bREPLACEBATT\b`).MatchString(status) {
+			return 25
+		}
+		if regexp.MustCompile(`\bCAL\b`).MatchString(status) {
+			return 27
+		}
+		return 20
+	}
+	if regexp.MustCompile(`\bCAL\b`).MatchString(status) {
+		return 30
+	}
+	return 0
 }
 
 // collectTimestamp collects timestamp metrics.
@@ -282,6 +371,7 @@ func collectTimestamp(ch chan<- prometheus.Metric, desc *prometheus.Desc, time t
 // The corresponding metric values are sent separately.
 func (c *UPSCollector) Describe(ch chan<- *prometheus.Desc) {
 	ds := []*prometheus.Desc{
+		c.Status,
 		c.UPSLoadPercent,
 		c.BatteryChargePercent,
 		c.LineVolts,
@@ -292,6 +382,8 @@ func (c *UPSCollector) Describe(ch chan<- *prometheus.Desc) {
 		c.BatteryTimeLeftSeconds,
 		c.BatteryTimeOnSeconds,
 		c.BatteryCumulativeTimeOnSecondsTotal,
+		c.NominalPowerWatts,
+		c.InternalTemp,
 	}
 
 	for _, d := range ds {
