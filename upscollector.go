@@ -345,8 +345,26 @@ func parseStatus(status string) float64 {
 		}
 		return 20
 	}
-	if regexp.MustCompile(`\bCAL\b`).MatchString(status) {
+	if regexp.MustCompile(`\bTRIM\b`).MatchString(status) {
 		return 30
+	}
+	if regexp.MustCompile(`\bBOOST\b`).MatchString(status) {
+		return 31
+	}
+	if regexp.MustCompile(`\bOVERLOAD\b`).MatchString(status) {
+		return 32
+	}
+	if regexp.MustCompile(`\bLOWBATT\b`).MatchString(status) {
+		return 33
+	}
+	if regexp.MustCompile(`\bREPLACEBATT\b`).MatchString(status) {
+		return 34
+	}
+	if regexp.MustCompile(`\bNOBATT\b`).MatchString(status) {
+		return 35
+	}
+	if regexp.MustCompile(`\bCAL\b`).MatchString(status) {
+		return 36
 	}
 	return 0
 }
