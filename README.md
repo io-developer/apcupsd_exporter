@@ -56,7 +56,9 @@ services:
 Sample
 ------
 
-Here is a screenshot of an example grafana dashboard using metrics from
+Here is a screenshot of an example grafana dashboard (/examples/grafana-dashboard.json) using metrics from
 `apcupsd_exporter`.
 
-![sample](https://cloud.githubusercontent.com/assets/1926905/18330011/55c49eca-7524-11e6-8152-717bf4bc75c0.png)
+![Grafana 1](/examples/grafana-1.png?raw=true)
+
+![Grafana 2](/examples/grafana-2.png?raw=true)
