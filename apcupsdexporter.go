@@ -21,7 +21,8 @@ const (
 // It implements the prometheus.Collector interface in order to register
 // with Prometheus.
 type Exporter struct {
-	clientFn ClientFunc
+	clientFn     ClientFunc
+	nominalPower float64
 }
 
 var _ prometheus.Collector = &Exporter{}
@@ -33,9 +34,10 @@ type ClientFunc func() (*apcupsd.Client, error)
 
 // New creates a new Exporter which collects metrics by creating a apcupsd
 // client using the input ClientFunc.
-func New(fn ClientFunc) *Exporter {
+func New(fn ClientFunc, nominalPower float64) *Exporter {
 	return &Exporter{
-		clientFn: fn,
+		clientFn:     fn,
+		nominalPower: nominalPower,
 	}
 }
 
@@ -70,7 +72,7 @@ func (e *Exporter) withCollectors(fn func(cs []prometheus.Collector)) {
 	}
 
 	cs := []prometheus.Collector{
-		NewUPSCollector(c),
+		NewUPSCollector(c, e.nominalPower),
 	}
 
 	fn(cs)

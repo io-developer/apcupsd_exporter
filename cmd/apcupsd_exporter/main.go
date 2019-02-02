@@ -17,6 +17,8 @@ var (
 
 	apcupsdAddr    = flag.String("apcupsd.addr", ":3551", "address of apcupsd Network Information Server (NIS)")
 	apcupsdNetwork = flag.String("apcupsd.network", "tcp", `network of apcupsd Network Information Server (NIS): typically "tcp", "tcp4", or "tcp6"`)
+
+	apcupsdNominalPower = flag.Int("apcupsd.nominalpower", 0, "default nominal power watts for apcupsd exporter")
 )
 
 func main() {
@@ -28,7 +30,7 @@ func main() {
 
 	fn := newClient(*apcupsdNetwork, *apcupsdAddr)
 
-	prometheus.MustRegister(apcupsdexporter.New(fn))
+	prometheus.MustRegister(apcupsdexporter.New(fn, float64(*apcupsdNominalPower)))
 
 	http.Handle(*metricsPath, prometheus.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

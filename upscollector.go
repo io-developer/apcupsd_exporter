@@ -2,6 +2,7 @@ package apcupsdexporter
 
 import (
 	"log"
+	"math"
 	"regexp"
 	"time"
 
@@ -36,13 +37,14 @@ type UPSCollector struct {
 	NominalPowerWatts                   *prometheus.Desc
 	InternalTemp                        *prometheus.Desc
 
-	ss StatusSource
+	ss           StatusSource
+	nominalPower float64
 }
 
 var _ prometheus.Collector = &UPSCollector{}
 
 // NewUPSCollector creates a new UPSCollector.
-func NewUPSCollector(ss StatusSource) *UPSCollector {
+func NewUPSCollector(ss StatusSource, nominalPower float64) *UPSCollector {
 	var (
 		labels = []string{"hostname", "ups_name", "model"}
 	)
@@ -160,7 +162,8 @@ func NewUPSCollector(ss StatusSource) *UPSCollector {
 			nil,
 		),
 
-		ss: ss,
+		ss:           ss,
+		nominalPower: nominalPower,
 	}
 }
 
@@ -279,7 +282,7 @@ func (c *UPSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	ch <- prometheus.MustNewConstMetric(
 		c.NominalPowerWatts,
 		prometheus.GaugeValue,
-		float64(s.NominalPower),
+		valOrDefault(float64(s.NominalPower), c.nominalPower),
 		labels...,
 	)
 
@@ -291,6 +294,13 @@ func (c *UPSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	)
 
 	return nil, nil
+}
+
+func valOrDefault(val float64, def float64) float64 {
+	if val > 0 && !math.IsNaN(val) {
+		return val
+	}
+	return def
 }
 
 func parseStatus(s string) int {
