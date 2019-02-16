@@ -1,9 +1,19 @@
-apcupsd_exporter [![Build Status](https://travis-ci.org/mdlayher/apcupsd_exporter.svg?branch=master)](https://travis-ci.org/mdlayher/apcupsd_exporter) [![GoDoc](http://godoc.org/github.com/mdlayher/apcupsd_exporter?status.svg)](http://godoc.org/github.com/mdlayher/apcupsd_exporter)
+apcupsd_exporter
+[![Build Status](https://travis-ci.org/mdlayher/apcupsd_exporter.svg?branch=master)](https://travis-ci.org/mdlayher/apcupsd_exporter) [![GoDoc](http://godoc.org/github.com/mdlayher/apcupsd_exporter?status.svg)](http://godoc.org/github.com/mdlayher/apcupsd_exporter)
+[![Docker Automated build](https://img.shields.io/docker/automated/iodeveloper/prom_apcupsdexporter.svg)](https://hub.docker.com/r/iodeveloper/prom_apcupsdexporter/)
 ================
 
 Command `apcupsd_exporter` provides a Prometheus exporter for the
 [apcupsd](http://www.apcupsd.org/) Network Information Server (NIS).
 MIT Licensed.
+
+
+Docker
+------
+[![Docker Hub repository](http://dockeri.co/image/iodeveloper/prom_apcupsdexporter)](https://registry.hub.docker.com/u/iodeveloper/prom_apcupsdexporter/)
+
+`iodeveloper/prom_apcupsdexporter`
+
 
 Usage
 -----
